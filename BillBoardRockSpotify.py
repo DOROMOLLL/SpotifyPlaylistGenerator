@@ -1,3 +1,5 @@
+'''A script to scrap billboard chart using selenium and update a weekly playlist in spotify
+   Author:ambati@stanford.edu'''
 from datetime import date
 import yaml
 import sys
@@ -7,13 +9,13 @@ import sys
 import spotipy
 import spotipy.util as util
 import os
-from json.decoder import JSONDecodeError
 from selenium import webdriver
 from collections import defaultdict
 from selenium.webdriver.chrome.options import Options
 
 
 def GetTags(tracks):
+    '''HTML parser to extract the song titles and albums'''
     TrackDic = defaultdict(set)
     for item in tracks:
         if item:
@@ -21,12 +23,12 @@ def GetTags(tracks):
                 "div", {"class": "chart-list-item__artist"}).get_text().strip().lower()
             song = item.find(
                 "span", {"class": "chart-list-item__title-text"}).get_text().strip().lower()
-            #album = item.find("div", {'class': "ts-artist tagstation__album"})
             TrackDic[artist].add(song)
     return TrackDic
 
 
 def SelScrap():
+    '''A selenium instance to get the dynamic content of the webpage'''
     from selenium import webdriver
     from selenium.webdriver.chrome.options import Options
     Url = "https://www.billboard.com/charts/rock-songs"
@@ -42,6 +44,7 @@ def SelScrap():
 
 
 def LoadConfig():
+    '''Spotify client secret and credentials as described in spotify API'''
     CfgFile = open('SPConfig.yml', 'r')
     cfg = yaml.safe_load(CfgFile)
     return cfg
@@ -49,6 +52,7 @@ def LoadConfig():
 
 ## implement search in spotify library
 def SpotifyConn():
+    '''Spotify conncetion instance'''
     SPConfig = LoadConfig()
     token = util.prompt_for_user_token(**SPConfig)
     sp = spotipy.Spotify(auth=token)
@@ -56,6 +60,7 @@ def SpotifyConn():
 
 
 def ParseSpotifySearch(TrackDic, sp):
+    '''A search function to extract tracks from spotify master api'''
     SPResults = set()
     for k, v in TrackDic.items():
         artist = k
@@ -64,7 +69,7 @@ def ParseSpotifySearch(TrackDic, sp):
             track_id = sp.search(q='artist:' + artist + ' track:' +
                                  track, type='track', limit=1, market='us')
             if track_id:
-                tracks = track_id['tracks']['items']  # [0].get('uri')
+                tracks = track_id['tracks']['items'] 
                 if tracks:
                     tracklist = [i.get('uri').split(':')[-1]
                                  for i in tracks][0]
@@ -77,6 +82,7 @@ def ParseSpotifySearch(TrackDic, sp):
         exit()
 
 def MakeWeeklyPlayList(sp):
+    '''A spotify APPI call to make a playlist based on the date of the scrap'''
     dt= date.today()
     dtformat = dt.strftime("%d %B %Y")
     NamePlaylist = 'BillBoardRock '+dtformat
@@ -88,6 +94,7 @@ def MakeWeeklyPlayList(sp):
 
     
 def UpdatePlaylist(TrackList, sp, PLID):
+    '''Since spotify API allows for only adding 100 tracks at once to a playslist, recursive function to update the playlist 98 tracks at once'''
     username = 'adityasai'
     if len(TrackList) > 0 and len(TrackList) <= 100:
         sp.user_playlist_add_tracks(
@@ -111,29 +118,6 @@ def UpdatePlaylist(TrackList, sp, PLID):
         UpdatePlaylist(TrackList=templist, sp=sp, PLID=PLID)
 
 
-# def CheckForDup(TrackList):
-#     NoDUPS = set()
-#     CacheFile = '/home/labcomp/PLAYLIST.CACHE'
-#     if os.path.exists(CacheFile):
-#         Cache = open(CacheFile, 'r')
-#         TrackIds = set(line.strip() for line in Cache)
-#         Cache.close()
-#         MakeDupFile = open(CacheFile, 'a')
-#         for track in TrackList:
-#             if track not in TrackIds:
-#                 MakeDupFile.write(track+'\n')
-#                 NoDUPS.add(track)
-#         MakeDupFile.close()
-#         NoDUPSList = [i for i in NoDUPS]
-#         return NoDUPSList
-#     else:
-#         MakeDupFile = open(CacheFile, 'w')
-#         for track in TrackList:
-#             MakeDupFile.write(track+'\n')
-#         MakeDupFile.close()
-#         return TrackList
-
-
 def main():
     TrackDic = SelScrap()
     print(TrackDic)
@@ -151,31 +135,3 @@ def main():
 if __name__ == "__main__":
     main()
 
-# tracklist = [i for i in SPResults]
-# PLID = '48FlMoZaugE96JFEq3PPGJ'
-# results = sp.user_playlist_add_tracks(
-#     username, playlist_id=PLID, tracks=tracklist)
-# ## create a new playlist
-# playlists = sp.user_playlist_create(
-#     user='adityasai', name='testplaylistapi', public=True)
-# GetID = playlists.get('uri')
-
-
-# search for a artist song combination
-# artist = 'Nine Inch Nails'
-# track = 'Hurt'
-# track_id = sp.search(q='artist:' + artist + ' track:' +
-#                      track, type='track', limit=10)
-# tracks = track_id['tracks']['items']  # [0].get('uri')
-# tracklist = [i.get('uri').split(':')[-1] for i in tracks]
-
-
-# results = sp.user_playlist_add_tracks(
-#     username, playlist_id=PLID, tracks=tracklist)
-# Url="https://alt1053.radio.com/playlist"
-# chrome_options = Options()
-# chrome_options.add_argument("--headless")
-# driver = webdriver.Chrome(options=chrome_options)
-# driver.get(Url)
-# soup = bs4.BeautifulSoup(driver.page_source, 'lxml')
-# tracks=soup.find_all("div", {"class": "ts-track-item"})
