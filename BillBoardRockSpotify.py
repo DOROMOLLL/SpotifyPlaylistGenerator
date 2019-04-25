@@ -2,13 +2,11 @@
    Author:ambati@stanford.edu'''
 from datetime import date
 import yaml
-import sys
 import os
-import bs4
 import sys
 import spotipy
 import spotipy.util as util
-import os
+import bs4
 from selenium import webdriver
 from collections import defaultdict
 from selenium.webdriver.chrome.options import Options
